@@ -13,8 +13,8 @@
 #'
 
 #' @importFrom data.table fread fwrite 
-#' @importFrom quitte 
-#' @importFrom gdxrrw
+#' @import quitte 
+#' @import gdxrrw
 #' @export
 reportDIETER <- function(dieterDatafile = "report_DIETER.gdx",output_dir=".",input_dir=".",
                          remind_root=NULL) {
