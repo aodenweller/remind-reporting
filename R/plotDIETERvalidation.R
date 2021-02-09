@@ -5,10 +5,10 @@
 #' @param outputdir path to the output directory of the REMIND-DIETER coupled run
 #'
 #' @author Adrian Odenweller
-#' @import dplyr
-#' @import ggplot2
+#' @importFrom dplyr %>% mutate select filter rename summarise group_by ungroup case_when left_join inner_join full_join desc
+#' @importFrom ggplot2 ggplot geom_line aes xlab ylab facet_wrap geom_area scale_fill_manual scale_color_manual coord_cartesian ggtitle geom_bar scale_alpha_manual theme scale_x_continuous scale_y_continuous scale_size_manual guides scale_linetype_manual sec_axis guide_legend
 #' @importFrom stringr str_sort
-#' @importFrom lusweave swopen swlatex swclose
+#' @importFrom lusweave swopen swlatex swfigure swclose
 #' @importFrom quitte read.gdx revalue.levels
 #' @importFrom gridExtra arrangeGrob
 #' @importFrom tidyr gather spread
@@ -93,6 +93,8 @@ plotDIETERvalidation <- function(outputdir) {
     # Define functions ----------------------------------------------------
 
     DIETERplotCapacityFactors <- function() {
+
+        # Set variables to NULL for code check compliance
         all_regi <- all_te <- cap <- capfac <- char <- NULL
         generation <- iteration <- model <- rlf <- NULL
         ttot <- variable <- value <- tall <- vm_cap <- vm_capFac <- technology <- var <- NULL
@@ -180,10 +182,6 @@ plotDIETERvalidation <- function(outputdir) {
             out.dieter.capfac <- rbind(out.dieter.capfac, dieter.data)
         }
 
-        # Make capacity factors available in parent environment
-        out.dieter.capfac <<- out.dieter.capfac
-        out.remind.capfac <<- out.remind.capfac
-
         # Plotting ----------------------------------------------------------------
 
         swlatex(sw, paste0("\\section{Capacity factors}"))
@@ -225,9 +223,13 @@ plotDIETERvalidation <- function(outputdir) {
             ylab("Capacity factor")
 
         swfigure(sw, print, p)
+
+        return(list("DIETER" = out.dieter.capfac, "REMIND" = out.remind.capfac))
     }
 
     DIETERplotCapacities <- function() {
+
+        # Set variables to NULL for code check compliance
         all_regi <- all_te <- capacity <- demand <- iteration <- NULL
         rlf <- tall <- technology <- value <- var <- NULL
 
@@ -241,7 +243,7 @@ plotDIETERvalidation <- function(outputdir) {
 
             # Read in vm_cap (capacity)
             remind.vm_cap <- file.path(outputdir, remind.files[i]) %>%
-                read.gdx("vm_cap", field = "l", squeeze = F) %>%
+                read.gdx("vm_cap", fields = "l", squeeze = F) %>%
                 filter(rlf == 1) %>%
                 select(-rlf) %>%
                 filter(all_regi == "DEU") %>%
@@ -256,7 +258,7 @@ plotDIETERvalidation <- function(outputdir) {
 
             # Read in v32_seelDem (total secondary electricity demand)
             remind.v32_seelDem <- file.path(outputdir, remind.files[i]) %>%
-                read.gdx("v32_seelDem", field = "l", squeeze = F) %>%
+                read.gdx("v32_seelDem", fields = "l", squeeze = F) %>%
                 filter(all_regi == "DEU") %>%
                 filter(tall %in% report.periods) %>%
                 mutate(demand = 0.000155891 * 8760 * 1e3 * value) %>%
@@ -306,7 +308,7 @@ plotDIETERvalidation <- function(outputdir) {
             p1 <- ggplot() +
                 geom_area(data = plot.remind.cap, aes(x = iteration, y = capacity, fill = all_te), alpha = 0.5) +
                 scale_fill_manual(name = "Technology", values = color.mapping) +
-                geom_line(data = plot.remind.dem, aes(x = iteration, y = demand, colour = "Peak demand"), linetype = "dotted") +
+                geom_line(data = plot.remind.dem, aes(x = iteration, y = demand, color = "Peak demand"), linetype = "dotted") +
                 scale_color_manual(name = "Demand", values = c("Peak demand" = "black")) +
                 coord_cartesian(xlim = c(0, max(plot.remind.cap$iteration))) +
                 xlab("Iteration") +
@@ -316,7 +318,7 @@ plotDIETERvalidation <- function(outputdir) {
             p2 <- ggplot() +
                 geom_area(data = plot.dieter, aes(x = iteration, y = capacity, fill = technology), alpha = 0.5) +
                 scale_fill_manual(name = "Technology", values = color.mapping) +
-                geom_line(data = plot.remind.dem, aes(x = iteration, y = demand, colour = "Peak demand"), linetype = "dotted") +
+                geom_line(data = plot.remind.dem, aes(x = iteration, y = demand, color = "Peak demand"), linetype = "dotted") +
                 scale_color_manual(name = "Demand", values = c("Peak demand" = "black")) +
                 coord_cartesian(xlim = c(0, max(plot.remind.cap$iteration))) +
                 xlab("Iteration") +
@@ -344,7 +346,7 @@ plotDIETERvalidation <- function(outputdir) {
         p1 <- ggplot() +
             geom_area(data = plot.remind.cap, aes(x = tall, y = capacity, fill = all_te), alpha = 0.5) +
             scale_fill_manual(name = "Technology", values = color.mapping) +
-            geom_line(data = plot.remind.dem, aes(x = tall, y = demand, colour = "Peak demand"), linetype = "dotted") +
+            geom_line(data = plot.remind.dem, aes(x = tall, y = demand, color = "Peak demand"), linetype = "dotted") +
             scale_color_manual(name = "Demand", values = c("Peak demand" = "black")) +
             xlab("Time") +
             ylab("Capacity [GW]") +
@@ -353,7 +355,7 @@ plotDIETERvalidation <- function(outputdir) {
         p2 <- ggplot() +
             geom_area(data = plot.dieter, aes(x = tall, y = capacity, fill = technology), alpha = 0.5) +
             scale_fill_manual(name = "Technology", values = color.mapping) +
-            geom_line(data = plot.remind.dem, aes(x = tall, y = demand, colour = "Peak demand"), linetype = "dotted") +
+            geom_line(data = plot.remind.dem, aes(x = tall, y = demand, color = "Peak demand"), linetype = "dotted") +
             scale_color_manual(name = "Demand", values = c("Peak demand" = "black")) +
             xlab("Time") +
             ylab("Capacity [GW]") +
@@ -366,6 +368,8 @@ plotDIETERvalidation <- function(outputdir) {
     }
 
     DIETERplotGeneration <- function() {
+
+        # Set variables to NULL for code check compliance
         all_enty.1 <- all_regi <- tall <- all_te <- value <- NULL
         var <- technology <- iteration <- generation <- NULL
 
@@ -378,7 +382,7 @@ plotDIETERvalidation <- function(outputdir) {
 
             # Read in vm_prodSe (generation)
             remind.vm_prodSe <- file.path(outputdir, remind.files[i]) %>%
-                read.gdx("vm_prodSe", field = "l", squeeze = F) %>%
+                read.gdx("vm_prodSe", fields = "l", squeeze = F) %>%
                 filter(all_enty.1 == "seel") %>%
                 filter(all_regi == "DEU") %>%
                 filter(tall %in% report.periods) %>%
@@ -478,6 +482,8 @@ plotDIETERvalidation <- function(outputdir) {
     }
 
     DIETERplotAddedCapacities <- function() {
+
+        # Set variables to NULL for code check compliance
         var <- technology <- variable <- model <- iteration <- NULL
         tall <- value <- NULL
         # Data preparation --------------------------------------------------------
@@ -493,7 +499,10 @@ plotDIETERvalidation <- function(outputdir) {
         out.dieter.report <- NULL
         for (i in 1:length(dieter.files.report)) {
             dieter.data <- file.path(outputdir, dieter.files.report[i]) %>%
-                read.gdx("report_tech", squeeze = F, colNames = c("file", "model", "tall", "all_regi", "var", "technology", "value")) %>%
+                read.gdx("report_tech",
+                    squeeze = F,
+                    colNames = c("file", "model", "tall", "all_regi", "var", "technology", "value")
+                ) %>%
                 filter(var %in% dieter.report.vars) %>%
                 filter(!technology == "coal") %>%
                 revalue.levels(technology = dieter.tech.mapping) %>%
@@ -529,8 +538,8 @@ plotDIETERvalidation <- function(outputdir) {
                 mutate(value = ifelse(variable == "Divestment", -value, value)) # Divestment has negative value
 
             p <- ggplot() +
-                geom_bar(data = plot.dieter, aes(x = tall, y = value, fill = model, alpha = variable), colour = "black", stat = "identity", position = "stack", width = 2) +
-                geom_bar(data = plot.remind, aes(x = tall, y = value, fill = model, alpha = variable), colour = "black", stat = "identity", position = "stack", width = 2) +
+                geom_bar(data = plot.dieter, aes(x = tall, y = value, fill = model, alpha = variable), color = "black", stat = "identity", position = "stack", width = 2) +
+                geom_bar(data = plot.remind, aes(x = tall, y = value, fill = model, alpha = variable), color = "black", stat = "identity", position = "stack", width = 2) +
                 scale_alpha_manual(values = c("Pre-inv. cap." = 1, "Added cap." = 0.5, "Divestment" = 0.2), limits = c("Pre-inv. cap.", "Added cap.", "Divestment")) +
                 facet_wrap(~technology, scales = "free") +
                 coord_cartesian(xlim = c(2010, 2100)) +
@@ -544,6 +553,8 @@ plotDIETERvalidation <- function(outputdir) {
     }
 
     DIETERplotLCOEs <- function(out.dieter.capfac) {
+
+        # Set variables to NULL for code check compliance
         var <- tall <- technology <- iteration <- var <- cost <- model <- value <- NULL
         IC <- OM <- FC <- CO2 <- NULL
         `CO2 cost` <- `O&M cost` <- `annualized investment cost` <- NULL
@@ -562,7 +573,10 @@ plotDIETERvalidation <- function(outputdir) {
         out.dieter.report <- NULL
         for (i in 1:length(dieter.files.report)) {
             dieter.data <- file.path(outputdir, dieter.files.report[i]) %>%
-                read.gdx("report_tech", squeeze = F, colNames = c("file", "model", "tall", "all_regi", "var", "technology", "value")) %>%
+                read.gdx("report_tech",
+                    squeeze = F,
+                    colNames = c("file", "model", "tall", "all_regi", "var", "technology", "value")
+                ) %>%
                 filter(var %in% dieter.report.vars) %>%
                 filter(tall %in% report.periods) %>%
                 mutate(var = factor(var, levels = rev(dieter.report.vars))) %>%
@@ -612,7 +626,7 @@ plotDIETERvalidation <- function(outputdir) {
             p <- ggplot() +
                 geom_bar(data = plot.dieter.lcoe, aes(x = iteration, y = cost, fill = var), stat = "identity", position = "stack") +
                 scale_fill_discrete(name = "LCOE components", labels = c("Annualised investment", "O&M", "Fuel", "CO2"), limits = c("IC", "OM", "FC", "CO2")) +
-                geom_point(data = plot.dieter.mv, aes(x = iteration, y = value, colour = "Market value")) +
+                geom_point(data = plot.dieter.mv, aes(x = iteration, y = value, color = "Market value")) +
                 scale_color_manual(values = "black", name = NULL) +
                 geom_text(data = plot.dieter.capfac, aes(x = iteration, y = 350, label = paste0(100 * round(value, 2), "%"))) +
                 theme(legend.position = "bottom") +
@@ -642,14 +656,14 @@ plotDIETERvalidation <- function(outputdir) {
         p <- ggplot() +
             geom_bar(data = plot.dieter.lcoe, aes(x = tall, y = cost, fill = var), stat = "identity", position = "stack") +
             scale_fill_discrete(name = "LCOE components", labels = c("Annualised investment", "O&M", "Fuel", "CO2"), limits = c("IC", "OM", "FC", "CO2")) +
-            geom_point(data = plot.dieter.mv, aes(x = tall, y = value, colour = "Market value")) +
+            geom_point(data = plot.dieter.mv, aes(x = tall, y = value, color = "Market value")) +
             scale_color_manual(values = "black", name = NULL) +
             geom_text(data = plot.dieter.capfac, aes(x = tall, y = 350, label = paste0(100 * round(value, 2), "%"))) +
             theme(legend.position = "bottom") +
             xlab("Time") +
             ylab("LCOE [$/MWh]") +
             coord_cartesian(ylim = c(0, 400)) +
-            facet_wrap(~technology, scale = "free")
+            facet_wrap(~technology, scales = "free")
 
         swfigure(sw, print, p, sw_option = "width=20, height=10")
 
@@ -657,9 +671,10 @@ plotDIETERvalidation <- function(outputdir) {
     }
 
     DIETERplotSeelPrice <- function(out.remind.capfac) {
+
+        # Set variables to NULL for code check compliance
         all_regi <- ttot <- all_enty <- tall <- q32_balSe.m <- m <- NULL
         qm_budget.m <- seel.price <- iteration <- capfac <- technology <- NULL
-
 
         # Data preparation --------------------------------------------------------
 
@@ -668,7 +683,7 @@ plotDIETERvalidation <- function(outputdir) {
         out.remind.seel <- NULL
         for (i in 1:length(remind.files)) {
             remind.q32_balSe <- file.path(outputdir, remind.files[i]) %>%
-                read.gdx("q32_balSe", field = "m", squeeze = F) %>%
+                read.gdx("q32_balSe", fields = "m", squeeze = F) %>%
                 filter(all_regi == "DEU") %>%
                 select(!all_regi) %>%
                 filter(ttot %in% report.periods) %>%
@@ -677,7 +692,7 @@ plotDIETERvalidation <- function(outputdir) {
                 rename(q32_balSe.m = m)
 
             remind.qm_budget <- file.path(outputdir, remind.files[i]) %>%
-                read.gdx("qm_budget", field = "m", squeeze = F) %>%
+                read.gdx("qm_budget", fields = "m", squeeze = F) %>%
                 filter(all_regi == "DEU") %>%
                 select(!all_regi) %>%
                 filter(ttot %in% report.periods) %>%
@@ -702,8 +717,8 @@ plotDIETERvalidation <- function(outputdir) {
         p <- ggplot() +
             geom_line(data = out.remind.seel, aes(x = iteration, y = seel.price, size = "Seel")) +
             scale_size_manual(name = "Shadow price", values = 1) +
-            geom_line(data = out.remind.capfac, aes(x = iteration, y = 2.5 * 100 * capfac, colour = technology)) +
-            scale_colour_manual(name = "Capacity factor", values = color.mapping) +
+            geom_line(data = out.remind.capfac, aes(x = iteration, y = 2.5 * 100 * capfac, color = technology)) +
+            scale_color_manual(name = "Capacity factor", values = color.mapping) +
             scale_y_continuous(name = "Seel price [$/MWh]", limits = c(0, 250), sec.axis = sec_axis(~ . / 2.5, name = paste0("CF", "(%)"))) +
             theme(legend.position = "bottom") +
             xlab("Iteration") +
@@ -723,8 +738,8 @@ plotDIETERvalidation <- function(outputdir) {
         p <- ggplot() +
             geom_line(data = plot.remind.seel, aes(x = tall, y = seel.price, size = "Seel")) +
             scale_size_manual(name = "Shadow price", values = 1) +
-            geom_line(data = plot.remind.capfac, aes(x = tall, y = 2.5 * 100 * capfac, colour = technology)) +
-            scale_colour_manual(name = "Capacity factor", values = color.mapping) +
+            geom_line(data = plot.remind.capfac, aes(x = tall, y = 2.5 * 100 * capfac, color = technology)) +
+            scale_color_manual(name = "Capacity factor", values = color.mapping) +
             scale_y_continuous(name = "Seel price [$/MWh]", limits = c(0, 250), sec.axis = sec_axis(~ . / 2.5, name = paste0("CF", "(%)"))) +
             theme(legend.position = "bottom") +
             xlab("Time")
@@ -734,6 +749,7 @@ plotDIETERvalidation <- function(outputdir) {
 
     DIETERplotPeakDemandPrice <- function() {
 
+        # Set variables to NULL for code check compliance
         all_enty <- tall <- q32_peakDemand_DT.m <- m <- NULL
         all_regi <- ttot <- tall <- qm_budget.m <- NULL
         peakdem.price <- iteration <- NULL
@@ -745,13 +761,13 @@ plotDIETERvalidation <- function(outputdir) {
         out.remind.peakdem <- NULL
         for (i in 1:length(remind.files)) {
             remind.q32_peakDemand_DT <- file.path(outputdir, remind.files[i]) %>%
-                read.gdx("q32_peakDemand_DT", field = "m", squeeze = F) %>%
+                read.gdx("q32_peakDemand_DT", fields = "m", squeeze = F) %>%
                 select(!all_enty) %>%
                 filter(tall %in% report.periods) %>%
                 rename(q32_peakDemand_DT.m = m)
 
             remind.qm_budget <- file.path(outputdir, remind.files[i]) %>%
-                read.gdx("qm_budget", field = "m", squeeze = F) %>%
+                read.gdx("qm_budget", fields = "m", squeeze = F) %>%
                 filter(all_regi == "DEU") %>%
                 select(!all_regi) %>%
                 filter(ttot %in% report.periods) %>%
@@ -801,6 +817,353 @@ plotDIETERvalidation <- function(outputdir) {
         swfigure(sw, print, p)
     }
 
+    DIETERplotRLDCs <- function() {
+
+        # Set variables to NULL for code check compliance
+        model <- all_regi <- var <- value <- tall <- demand.RLDC <- NULL
+        technology <- Solar <- Solar_curtailed <- Solar.RLDC <- Wind <- NULL
+        Wind_curtailed <- Wind.RLDC <- hour.sorted <- iteration <- demand.hour.sorted <- NULL
+
+
+        # Data preparation --------------------------------------------------------
+
+        cat("Plot RLDCs \n")
+
+        # Order of technologies in RLDC plot
+        rldc.order <-
+            c(
+                "Nuclear",
+                "Hydro",
+                "Lignite",
+                "Hard coal",
+                "Biomass",
+                "CCGT",
+                "OCGT"
+            )
+        vre.order <- c("Wind", "Solar")
+        order <- c(rldc.order, vre.order)
+
+        # Initialise output files
+        out.dieter.demand <- NULL
+        out.dieter.rldc <- NULL
+        # Loop over DIETER iterations
+        for (i in 1:length(dieter.files.report)) {
+            # Read in demand(hour)
+            dieter.report_hours <-
+                file.path(outputdir, dieter.files.report[i]) %>%
+                read.gdx("report_hours",
+                    squeeze = F,
+                    colNames = c("file", "model", "tall", "all_regi", "var", "hour", "value")
+                ) %>%
+                select(!c(file, model, all_regi)) %>%
+                filter(var == "fixed demand") %>%
+                select(!var) %>%
+                rename(demand.RLDC = value) %>% # Rename demand for RLDC calculation later
+                mutate(hour = as.numeric(substring(hour, 2))) %>%
+                group_by(tall) %>%
+                arrange(desc(demand.RLDC)) %>% # Descending order
+                mutate(demand.hour.sorted = seq(1, 8760)) %>% # Descending hour (sorted)
+                mutate(iteration = dieter.iter.step * i) %>%
+                ungroup()
+
+            out.dieter.demand <- rbind(out.dieter.demand, dieter.report_hours)
+
+            # Read in generation(hour,tech)
+            dieter.report_tech_hours <-
+                file.path(outputdir, dieter.files.report[i]) %>%
+                read.gdx("report_tech_hours",
+                    squeeze = F,
+                    colNames = c("file", "model", "tall", "all_regi", "var", "technology", "hour", "value")
+                ) %>%
+                select(!c(file, model, all_regi)) %>%
+                revalue.levels(technology = dieter.tech.mapping) %>%
+                mutate(hour = as.numeric(substring(hour, 2))) %>%
+                mutate(technology = as.character(technology)) %>%
+                mutate(technology = case_when( # Make curtailment a separate "technology"
+                    var == "curtailment of fluct res" ~ paste0(technology, "_curtailed"),
+                    TRUE ~ technology
+                )) %>%
+                select(!var) %>%
+                complete(technology, tall, hour = 1:8760, fill = list(value = 0)) # Fill up missing hours with 0
+
+            # Join both datasets for RLDC calculation
+            dieter.data <-
+                inner_join(dieter.report_hours, dieter.report_tech_hours) %>%
+                spread(technology, value)
+
+            # Calculate RLDCs for solar and wind (with curtailment)
+            dieter.data <- dieter.data %>%
+                mutate(Solar.RLDC = demand.RLDC - Solar - Solar_curtailed) %>%
+                group_by(tall) %>%
+                arrange(desc(Solar.RLDC), group_by = T) %>%
+                mutate(Solar.hour.sorted = seq(1, 8760)) %>%
+                mutate(Wind.RLDC = Solar.RLDC - Wind - Wind_curtailed) %>%
+                arrange(desc(Wind.RLDC), group_by = T) %>%
+                mutate(Wind.hour.sorted = seq(1, 8760))
+
+            # Calculate RLDCs for dispatchable technologies (without curtailment)
+            # This loop calculates the RLDC lines, with different x-axes for each technology
+            vars <- c("Wind", rev(rldc.order))
+            for (t in 1:(length(vars) - 1)) {
+                var1 <- vars[t]
+                var2 <- vars[t + 1]
+                dieter.data <- dieter.data %>%
+                    mutate(!!paste0(var2, ".RLDC") := !!sym(paste0(var1, ".RLDC")) - !!sym(var2)) %>%
+                    arrange(desc(!!sym(paste0(var2, ".RLDC")))) %>%
+                    mutate(!!paste0(var2, ".hour.sorted") := seq(1, 8760))
+            }
+
+            # Calculate differences between RLDC lines for area plot
+            # This loop calculates the height of each stacked sorted technology for the same x-axis
+            vars <- c("demand", rev(order))
+            for (v in 1:(length(vars) - 1)) {
+                var1 <- vars[v]
+                var2 <- vars[v + 1]
+                for (t in sort(unique(dieter.data$tall))) {
+                    dieter.temp <- dieter.data %>%
+                        select(
+                            tall,
+                            paste0(var1, ".RLDC"),
+                            paste0(var1, ".hour.sorted"),
+                            paste0(var2, ".RLDC"),
+                            paste0(var2, ".hour.sorted")
+                        ) %>%
+                        filter(tall == t)
+
+                    # Sort both RLDCs from large to small for subsequent subtraction
+                    m1 <- match(1:8760, dieter.temp[paste0(var1, ".hour.sorted")][[1]])
+                    m2 <- match(1:8760, dieter.temp[paste0(var2, ".hour.sorted")][[1]])
+                    rldc1 <- dieter.temp[paste0(var1, ".RLDC")][[1]][m1]
+                    rldc2 <- dieter.temp[paste0(var2, ".RLDC")][[1]][m2]
+
+                    # Without curtailment
+                    rldc.temp <- pmax(rldc1, 0) - pmax(rldc2, 0)
+
+                    dieter.temp <- dieter.temp %>%
+                        mutate(value = rldc.temp) %>%
+                        mutate(hour.sorted = 1:8760) %>%
+                        mutate(technology = var2) %>%
+                        select(tall, hour.sorted, technology, value) %>%
+                        mutate(iteration = dieter.iter.step * i)
+
+                    # Calculate curtailment for solar and wind
+                    if (v %in% c(1, 2)) {
+                        rldc.temp.curt <- pmin(rldc1, 0) - pmin(rldc2, 0)
+
+                        dieter.temp.curt <- dieter.temp %>%
+                            mutate(value = -rldc.temp.curt) %>%
+                            mutate(technology = paste0(var2, "_curt"))
+
+                        dieter.temp <- rbind(dieter.temp, dieter.temp.curt)
+                    }
+
+                    # Append output
+                    out.dieter.rldc <- rbind(out.dieter.rldc, dieter.temp)
+                }
+            }
+        }
+
+        # Plotting ----------------------------------------------------------------
+
+        color.mapping.rldc <- c(color.mapping, "Wind_curt" = "#66b3ff", "Solar_curt" = "#ffd940")
+
+        swlatex(sw, "\\onecolumn")
+        swlatex(sw, paste0("\\section{Residual load duration curves (RLDCs)}"))
+
+        for (i in unique(out.dieter.rldc$iteration)) {
+            plot.dieter.rldc <- out.dieter.rldc %>%
+                filter(iteration == i) %>%
+                mutate(technology = factor(technology, levels = c(rev(order), "Wind_curt", "Solar_curt"))) %>% # Sort technologies for plotting
+                filter(hour.sorted %in% c(seq(1, 8760, 20), 8760)) %>% # Only plot every 20-th hour to decrease file size
+                mutate(value = value / 1e3) # MW -> GW
+
+            plot.dieter.demand <- out.dieter.demand %>%
+                filter(iteration == i) %>%
+                filter(demand.hour.sorted %in% c(seq(1, 8760, 20), 8760)) %>% # Only plot every 20-th hour to decrease file size
+                mutate(demand.RLDC = demand.RLDC / 1e3) # MW -> GW
+
+            swlatex(sw, paste0("\\subsection{RLDCs in iteration ", i, "}"))
+
+            p <- ggplot() +
+                geom_area(data = plot.dieter.rldc, aes(x = hour.sorted, y = value, fill = technology), position = "stack", alpha = 0.8) +
+                scale_fill_manual(name = "Technology", values = color.mapping.rldc) +
+                geom_line(data = plot.dieter.demand, aes(x = demand.hour.sorted, y = demand.RLDC, color = "Demand"), size = 1) +
+                scale_color_manual(name = NULL, values = c("Demand" = "black")) +
+                guides(color = guide_legend(order = 1), fill = guide_legend(order = 2)) +
+                xlab("Hours (sorted)") +
+                ylab("Generation [GW]") +
+                facet_wrap(~tall, ncol = 4, scales = "free")
+
+            swfigure(sw, print, p, sw_option = "width=20, height=12")
+        }
+    }
+
+    DIETERplotPriceDurationCurves <- function() {
+
+        # Set variables to NULL for code check compliance
+        var <- tall <- value <- hour.sorted <- NULL
+        model <- all_regi <- NULL
+
+        # Data preparation --------------------------------------------------------
+
+        cat("Plot price duration curve \n")
+
+        # Initialise output files
+        out.dieter <- NULL
+
+        # Loop over DIETER iterations
+        for (i in 1:length(dieter.files.report)) {
+            # Read in demand(hour)
+            dieter.report_hours <-
+                file.path(outputdir, dieter.files.report[i]) %>%
+                read.gdx("report_hours",
+                    squeeze = F,
+                    colNames = c("file", "model", "tall", "all_regi", "var", "hour", "value")
+                ) %>%
+                select(!c(file, model, all_regi)) %>%
+                filter(var == "price") %>%
+                mutate(hour = as.numeric(substring(hour, 2))) %>%
+                group_by(tall) %>%
+                arrange(desc(value), group_by = T) %>% # Descending order
+                mutate(hour.sorted = seq(1, 8760)) %>% # Descending hour (sorted)
+                mutate(iteration = dieter.iter.step * i) %>%
+                ungroup()
+
+            out.dieter <- rbind(out.dieter, dieter.report_hours)
+        }
+
+        # Plotting ----------------------------------------------------------------
+
+        swlatex(sw, "\\onecolumn")
+        swlatex(sw, paste0("\\section{Price duration curves}"))
+
+        for (t.rep in report.periods) {
+            plot.dieter <- out.dieter %>%
+                filter(tall == t.rep)
+
+            swlatex(sw, paste0("\\subsection{Price duration curve in ", t.rep, " over iterations}"))
+
+            p <- ggplot() +
+                geom_line(data = plot.dieter, aes(x = hour.sorted, y = value)) +
+                xlab("Hours (sorted)") +
+                ylab("Electricity price [$/MWh]") +
+                scale_y_continuous(trans = "log10") +
+                facet_wrap(~iteration, ncol = 4)
+
+            swfigure(sw, print, p, sw_option = "width=20, height=10")
+        }
+    }
+
+    DIETERplotInverseScreeningCurve <- function() {
+
+        # Set variables to NULL for code check compliance
+        var <- technology <- value <- tall <- hour.running <- hour.sorted <- NULL
+        iteration <- screening <- inv.screening <- NULL
+        IC <- OM <- FC <- CO2 <- NULL
+        `CO2 cost` <- `O&M cost` <- `annualized investment cost` <- `fuel cost (divided by eta)` <- NULL
+        model <- all_regi <- NULL
+
+        # Data preparation --------------------------------------------------------
+
+        cat("Plot inverse screening curve \n")
+
+        dieter.report.lcoe.kW <- c("annualized investment cost", "O&M cost")
+        dieter.report.lcoe.MWh <- c("fuel cost (divided by eta)", "CO2 cost")
+        dieter.report.vars <- c(dieter.report.lcoe.kW, dieter.report.lcoe.MWh)
+
+        report.tech <- c("CCGT", "OCGT", "Lignite", "Hard coal", "Biomass")
+
+        # Initialise output files
+        out.dieter <- NULL
+        # Loop over DIETER iterations
+        for (i in 1:length(dieter.files.report)) {
+            dieter.report_tech <-
+                file.path(outputdir, dieter.files.report[i]) %>%
+                read.gdx("report_tech", squeeze = F, colNames = c("file", "model", "tall", "all_regi", "var", "technology", "value")) %>%
+                select(!c(file, model, all_regi)) %>%
+                filter(var %in% dieter.report.vars) %>%
+                revalue.levels(technology = dieter.tech.mapping) %>%
+                filter(technology %in% report.tech) %>%
+                spread(var, value) %>%
+                rename(IC = `annualized investment cost`, OM = `O&M cost`, FC = `fuel cost (divided by eta)`, CO2 = `CO2 cost`) %>%
+                tidyr::replace_na(list(CO2 = 0, FC = 0))
+
+            dieter.report_tech_hours <-
+                file.path(outputdir, dieter.files.report[i]) %>%
+                read.gdx("report_tech_hours",
+                    squeeze = F,
+                    colNames = c("file", "model", "tall", "all_regi", "var", "technology", "hour", "value")
+                ) %>%
+                filter(var == "generation") %>%
+                select(!c(file, model, all_regi, var)) %>%
+                revalue.levels(technology = dieter.tech.mapping) %>%
+                mutate(hour = as.numeric(substring(hour, 2))) %>%
+                filter(technology %in% report.tech) %>%
+                complete(technology, tall, hour = 1:8760, fill = list(value = NA)) %>% # Fill up missing hours with 0
+                group_by(tall, technology) %>%
+                arrange(desc(value)) %>%
+                mutate(hour.sorted = 1:8760) %>%
+                mutate(hour.running = case_when(
+                    is.na(value) ~ "No",
+                    !is.na(value) ~ "Yes"
+                )) %>%
+                mutate(hour.running = factor(hour.running, levels = c("Yes", "No")))
+
+            dieter.report <- full_join(dieter.report_tech, dieter.report_tech_hours) %>%
+                mutate(screening = hour.sorted * (FC + CO2) / 1e3 + (IC + OM)) %>% # $/kW
+                mutate(inv.screening = (FC + CO2) + (IC + OM) / hour.sorted * 1e3) %>% # $/MWh
+                mutate(iteration = dieter.iter.step * i)
+
+            out.dieter <- rbind(out.dieter, dieter.report)
+        }
+
+        # Plotting ----------------------------------------------------------------
+
+        swlatex(sw, "\\onecolumn")
+        swlatex(sw, paste0("\\section{Screening curves}"))
+
+        for (i in unique(out.dieter$iteration)) {
+            plot.dieter <- out.dieter %>%
+                filter(iteration == i) %>%
+                filter(hour.sorted %in% c(seq(1, 8760, 20), 8760)) # Only plot every 20-th hour to decrease file size
+
+            swlatex(sw, paste0("\\subsection{Screening curves in iteration ", i, "}"))
+
+            p <- ggplot() +
+                geom_line(data = plot.dieter, aes(x = hour.sorted, y = screening, color = technology, linetype = hour.running), size = 1) +
+                scale_color_manual(name = "Technology", values = color.mapping) +
+                scale_linetype_manual(name = "Running", values = c(Yes = "solid", No = "dotted")) +
+                xlab("Hours (sorted)") +
+                ylab("Total cost [$/kW]") +
+                scale_x_continuous(limits = c(0, 8760)) +
+                facet_wrap(~tall)
+
+            swfigure(sw, print, p, sw_option = "width=20, height=10")
+        }
+
+        swlatex(sw, paste0("\\section{Inverse screening curves}"))
+
+        for (i in unique(out.dieter$iteration)) {
+            plot.dieter <- out.dieter %>%
+                filter(iteration == i) %>%
+                filter(hour.sorted %in% c(seq(1, 8760, 20), 8760)) # Only plot every 20-th hour to decrease file size
+
+            swlatex(sw, paste0("\\subsection{Inverse screening curves in iteration ", i, "}"))
+
+            p <- ggplot() +
+                geom_line(data = plot.dieter, aes(x = hour.sorted, y = inv.screening, color = technology, linetype = hour.running), size = 1) +
+                scale_color_manual(name = "Technology", values = color.mapping) +
+                scale_linetype_manual(name = "Running", values = c(Yes = "solid", No = "dotted")) +
+                scale_x_continuous(limits = c(0, 8760)) +
+                scale_y_continuous(limits = c(0, 200)) +
+                xlab("Hours (sorted)") +
+                ylab("Total cost [$/MWh]") +
+                facet_wrap(~tall)
+
+            swfigure(sw, print, p, sw_option = "width=20, height=10")
+        }
+    }
+
     # LaTeX configurations ----------------------------------------------------
 
     template <- c(
@@ -836,7 +1199,9 @@ plotDIETERvalidation <- function(outputdir) {
 
     # Capacity factors --------------------------------------------------------
 
-    DIETERplotCapacityFactors()
+    out <- DIETERplotCapacityFactors()
+    out.dieter.capfac <- out$DIETER
+    out.remind.capfac <- out$REMIND
 
     # Capacities --------------------------------------------------------------
 
@@ -864,15 +1229,15 @@ plotDIETERvalidation <- function(outputdir) {
 
     # (Residual) load duration curves -----------------------------------------
 
-    # DIETERplotRLDCs()
+    DIETERplotRLDCs()
 
     # Price duration curves ---------------------------------------------------
 
-    # DIETERplotPriceDurationCurves()
+    DIETERplotPriceDurationCurves()
 
     # (Inverse) screening curves ----------------------------------------------
 
-    # DIETERplotInverseScreeningCurve()
+    DIETERplotInverseScreeningCurve()
 
     # Markups -----------------------------------------------------------------
 
